@@ -27,11 +27,11 @@ Controls Motor 1-2
 #define potPin2   A1
 #define ledPin 9
 // M1 ------------------------------
-const int UpperLimit = 410;
-const int LowerLimit = 35;
+const int UpperLimit = 470;
+const int LowerLimit = 45;
 // M2 -----------------------------
-const int UpperLimit2 = 425;
-const int LowerLimit2 = 50;
+const int UpperLimit2 = 485;
+const int LowerLimit2 = 90;
 //  --------------------------------
 int action = 0;
 // Automaton Objects ----------------------------------------
@@ -44,7 +44,7 @@ Atm_button downSwitch2;
 Atm_analog pot1;
 Atm_analog pot2;
 // Controller machine for monitoring the Potenciometers
-Atm_controller MotorController;
+
 Atm_led statusLED;
 
 const char* mqtt_mqttServer = "192.198.10.22";
@@ -64,7 +64,7 @@ EthernetClient ethclient;
 PubSubClient client(ethclient);
 
 unsigned long previousMillis;
-unsigned long polling_interval = 1000;
+unsigned long polling_interval = 2000;
 int position = 0;
 
 Atm_led motor1;
@@ -87,9 +87,12 @@ void callback(char* topic, byte* payload, unsigned int length) {
    if ((char)payload[0] == '0') {
    
     Serial.println("MQTT_STOP");
+    action=0;
     motor1.trigger(motor1.EVT_OFF);
     motor2.trigger(motor2.EVT_OFF);
-    action=0;
+    client.publish("STATUS", "10");
+    client.publish("STATUS", "20");
+    
     digitalWrite(dirPin,LOW);
       
   } 
@@ -97,11 +100,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
   if ((char)payload[0] == '1') {
    
     Serial.println("MQTT_CLOSING");
-    client.publish("STATUS", "1-CLOSING");
     action = 1;
     motor1.trigger(motor1.EVT_ON);
     motor2.trigger(motor2.EVT_ON);
-   
+    client.publish("STATUS", "13");
+    client.publish("STATUS", "23");
     digitalWrite(dirPin,LOW);
      
   } 
@@ -113,6 +116,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
     action = 2;
     motor1.trigger(motor1.EVT_ON);
     motor2.trigger(motor2.EVT_ON);
+    client.publish("STATUS", "13");
+    client.publish("STATUS", "23");
     digitalWrite(dirPin,HIGH);
     
   }
@@ -120,7 +125,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 }
 
-void reconnect() {
+void reconnect()
+{
   // Loop until we're reconnected
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
@@ -128,8 +134,8 @@ void reconnect() {
     if (client.connect("LF2")) {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      client.publish("LF2", "ONLINE");
-      
+      client.publish("STATUS", "15");
+      client.publish("STATUS", "25");
 
       // ... and resubscribe
       client.subscribe("SIGNAL");
@@ -151,11 +157,11 @@ void pot1_callback( int idx, int v, int up ) {
   { 
   
    motor1.trigger(motor1.EVT_OFF);
-   client.publish("LFCTRL1", "11");
+    client.publish("STATUS", "11");
 
    }else if(v > UpperLimit && action==2){
      motor1.trigger(motor1.EVT_OFF);
-     client.publish("LFCTRL1", "21");
+     client.publish("STATUS", "12");
    }
   
 }
@@ -164,10 +170,10 @@ void pot2_callback( int idx, int v, int up ) {
   if (v < LowerLimit2  && action==1)
   {  
    motor2.trigger(motor2.EVT_OFF);
-    client.publish("LFCTRL1", "21");
+    client.publish("STATUS", "21");
    }else if(v > UpperLimit2 && action==2){
      motor2.trigger(motor2.EVT_OFF);
-     client.publish("LFCTRL1", "22");
+     client.publish("STATUS", "22");
    }
   
 }
@@ -221,11 +227,21 @@ void loop() {
   // Main Utility Task Loop
   if(currentMillis - previousMillis > polling_interval) {  
     previousMillis = currentMillis;  
-    //Serial.print("M1 -");
-    //Serial.println(pot1.state());
-    //Serial.println("---------");
-    //Serial.print("M2 -");
-    //Serial.println(pot2.state());
+    // Serial.print("M1 -");
+    // Serial.println(pot1.state());
+    // Serial.println("---------");
+    // Serial.print("M2 -");
+    // Serial.println(pot2.state());
+    if (action==1 || action==2)
+    {
+      char potvalue[2] ;
+      sprintf(potvalue,"%d",pot1.state());
+      client.publish("LF1", potvalue);
+     sprintf(potvalue,"%d",pot2.state());
+      client.publish("LF2", potvalue);
+    }
+    
+    
   }
 
 
