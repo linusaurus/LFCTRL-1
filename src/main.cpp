@@ -28,9 +28,9 @@ Controls Motor 1-2
 #define ledPin 9
 // M1 ------------------------------
 const int UpperLimit = 470;
-const int LowerLimit = 45;
+const int LowerLimit = 60;
 // M2 -----------------------------
-const int UpperLimit2 = 485;
+const int UpperLimit2 = 480;
 const int LowerLimit2 = 90;
 //  --------------------------------
 int action = 0;
@@ -52,9 +52,9 @@ const char* mqtt_mqttServer = "192.198.10.22";
 // The IP address will be dependent on your local network.
 // gateway and subnet are optional:
 byte mac[] = {
-  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED
+  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xEE
 };
-IPAddress ip(192, 168, 10, 169);
+IPAddress ip(192, 168, 10, 161);
 IPAddress myDns(192, 168, 10, 199);
 IPAddress gateway(192, 168, 10, 199);
 IPAddress subnet(255, 255, 255, 0);
@@ -112,7 +112,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   if ((char)payload[0] == '2') {
 
     Serial.println("MQTT_OPEN");
-    client.publish("STATUS", "1-OPENING");
+   
     action = 2;
     motor1.trigger(motor1.EVT_ON);
     motor2.trigger(motor2.EVT_ON);
@@ -131,7 +131,7 @@ void reconnect()
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (client.connect("LF2")) {
+    if (client.connect("LF1")) {
       Serial.println("connected");
       // Once connected, publish an announcement...
       client.publish("STATUS", "15");
@@ -156,12 +156,14 @@ void pot1_callback( int idx, int v, int up ) {
   if (v < LowerLimit  && action==1)
   { 
   
-   motor1.trigger(motor1.EVT_OFF);
+    motor1.trigger(motor1.EVT_OFF);
+    
     client.publish("STATUS", "11");
 
    }else if(v > UpperLimit && action==2){
      motor1.trigger(motor1.EVT_OFF);
      client.publish("STATUS", "12");
+     
    }
   
 }
@@ -170,6 +172,7 @@ void pot2_callback( int idx, int v, int up ) {
   if (v < LowerLimit2  && action==1)
   {  
    motor2.trigger(motor2.EVT_OFF);
+   motor2.trace(Serial);
     client.publish("STATUS", "21");
    }else if(v > UpperLimit2 && action==2){
      motor2.trigger(motor2.EVT_OFF);
@@ -188,9 +191,9 @@ void setup() {
   //upSwitch1.trace(Serial);
   //---------------------------------------------------------------
   upSwitch2.begin(upLimitPin2).onRelease(motor2, motor2.EVT_OFF);
-  upSwitch2.trace(Serial);
+  //upSwitch2.trace(Serial);
   downSwitch2.begin(downLimitPin2).onRelease(motor2, motor2.EVT_OFF);
-  downSwitch2.trace(Serial);
+  //downSwitch2.trace(Serial);
   //--------------------------------------------------------------
   pot1.begin(potPin1,50)
       .average(avgPot1Buffer, sizeof(avgPot1Buffer))
@@ -230,17 +233,18 @@ void loop() {
     // Serial.print("M1 -");
     // Serial.println(pot1.state());
     // Serial.println("---------");
-    // Serial.print("M2 -");
-    // Serial.println(pot2.state());
-    if (action==1 || action==2)
-    {
-      char potvalue[2] ;
-      sprintf(potvalue,"%d",pot1.state());
-      client.publish("LF1", potvalue);
-     sprintf(potvalue,"%d",pot2.state());
-      client.publish("LF2", potvalue);
-    }
-    
+    Serial.print("M2 -");
+    Serial.println(pot2.state());
+    Serial.print("Action = ");
+    Serial.println(action);
+    // if (action==1 || action==2)
+    // {
+    //   char potvalue[2] ;
+    //   sprintf(potvalue,"%d",pot1.state());
+    //   client.publish("LF1", potvalue);
+    //   sprintf(potvalue,"%d",pot2.state());
+    //   client.publish("LF2", potvalue);
+    // }
     
   }
 
