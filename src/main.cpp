@@ -3,10 +3,10 @@ Design Synthesis.net -r.young 6/3/2019 v1.0
 Skylight Sub-Controller [LSCTRL1 / LSCTRL2]
 Control two motors with potentiometer limits
 UP and DOWN limit switches for damage control
-------------------------------------------------------------
+(-----------------------------------------------------------)
 UnitName = LFCTRL1
 Controls Motor 1-2
-------------------------------------------------------------
+(-----------------------------------------------------------)
 */
 #include <Arduino.h>
 #include <SPI.h>
@@ -27,11 +27,11 @@ Controls Motor 1-2
 #define potPin2   A1
 #define ledPin 9
 // M1 ------------------------------
-const int UpperLimit = 470;
-const int LowerLimit = 60;
+const int UpperLimit = 445;
+const int LowerLimit = 65;
 // M2 -----------------------------
-const int UpperLimit2 = 480;
-const int LowerLimit2 = 90;
+const int UpperLimit2 = 445;
+const int LowerLimit2 = 65;
 //  --------------------------------
 int action = 0;
 // Automaton Objects ----------------------------------------
@@ -157,7 +157,6 @@ void pot1_callback( int idx, int v, int up ) {
   { 
   
     motor1.trigger(motor1.EVT_OFF);
-    
     client.publish("STATUS", "11");
 
    }else if(v > UpperLimit && action==2){
@@ -204,7 +203,7 @@ void setup() {
   // -------------------------------------------------------------
   // Motors Controls
   motor1.begin(motorPin1);
-  motor2.begin(motorPin2).brightness(243);// Throttle back dominant motor-Good Luck!?!
+  motor2.begin(motorPin2);// Throttle back dominant motor-Good Luck!?!
 
   Serial.begin(9600);
   // print your local IP address: 
@@ -230,13 +229,13 @@ void loop() {
   // Main Utility Task Loop
   if(currentMillis - previousMillis > polling_interval) {  
     previousMillis = currentMillis;  
-    // Serial.print("M1 -");
-    // Serial.println(pot1.state());
-    // Serial.println("---------");
+    Serial.print("M1 -");
+    Serial.println(pot1.state());
+    Serial.println("---------");
     Serial.print("M2 -");
     Serial.println(pot2.state());
-    Serial.print("Action = ");
-    Serial.println(action);
+    // Serial.print("Action = ");
+    // Serial.println(action);
     // if (action==1 || action==2)
     // {
     //   char potvalue[2] ;
