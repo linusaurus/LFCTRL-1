@@ -13,8 +13,10 @@ Controls Motor 1-2
 #include <Ethernet.h>
 #include <PubSubClient.h>
 #include <Automaton.h>
+#include <PID_v1.h>
 
-#define motorPin1   2
+
+#define motorPin1   9
 #define motorPin2   3
 #define dirPin      4
 //  RED WIRE COMMON HIGH NO
@@ -23,8 +25,8 @@ Controls Motor 1-2
 #define upLimitPin2    7 //BLUE
 #define downLimitPin2  8 //YELLOW
 
-#define potPin1   A0
-#define potPin2   A1
+#define potPin1   A0    // Setpoint Master
+#define potPin2   A1    // Slave output
 #define ledPin 9
 // M1 ------------------------------
 const int UpperLimit = 445;
@@ -41,8 +43,8 @@ Atm_button upSwitch2;
 Atm_button downSwitch2;
 
 // State Machine functions for Potentiometer--
-Atm_analog pot1;
-Atm_analog pot2;
+Atm_analog pot1;  //Set-Point
+Atm_analog pot2;  //Slave
 // Controller machine for monitoring the Potenciometers
 
 Atm_led statusLED;
@@ -64,11 +66,12 @@ EthernetClient ethclient;
 PubSubClient client(ethclient);
 
 unsigned long previousMillis;
-unsigned long polling_interval = 2000;
+unsigned long polling_interval = 1000;
 int position = 0;
 
-Atm_led motor1;
-Atm_led motor2;
+Atm_led motor1; //Master
+Atm_led motor2; //Slave
+long BREAKVALUE = 160;
 
 uint16_t avgPot1Buffer[16];
 uint16_t avgPot2Buffer[16];
@@ -151,7 +154,6 @@ void reconnect()
  
 
 void pot1_callback( int idx, int v, int up ) {
- 
   
   if (v < LowerLimit  && action==1)
   { 
@@ -203,12 +205,13 @@ void setup() {
   // -------------------------------------------------------------
   // Motors Controls
   motor1.begin(motorPin1);
-  motor2.begin(motorPin2);// Throttle back dominant motor-Good Luck!?!
+  motor2.begin(motorPin2).brightness(255);// Throttle back dominant motor-Good Luck!?!
 
   Serial.begin(9600);
   // print your local IP address: 
   // Allow the hardware to sort itself out
   delay(1500);
+
 
   client.setServer(mqttServer, 1883);
   client.setCallback(callback);
@@ -231,18 +234,70 @@ void loop() {
     previousMillis = currentMillis;  
     Serial.print("M1 -");
     Serial.println(pot1.state());
-    Serial.println("---------");
     Serial.print("M2 -");
     Serial.println(pot2.state());
-    // Serial.print("Action = ");
-    // Serial.println(action);
-    // if (action==1 || action==2)
+    Serial.println("---------");
+    
+    long pos1 = pot1.state() ;
+    long pos2 = pot2.state(); 
+
+    long err = pos1 - pos2;
+    Serial.print("Error ->");
+    Serial.println(err);
+    Serial.print("Action");
+    Serial.println(action);
+    long correction = abs(err);
+    
+    if (err > 0)   // Error is positive number--
+    {
+      if (action==2)
+      {
+        Serial.print("Up > POS : ");
+        Serial.println("PUSH 2");
+        motor2.brightness(255);
+        motor1.brightness(BREAKVALUE);
+      }
+      if (action==1)
+      {
+        Serial.print("Down>POS : ");
+        Serial.println("PUSH 1");
+        motor2.brightness(BREAKVALUE);
+        motor1.brightness(255);
+      }
+    }
+
+    if (err < 0)   // Error is negative number--
+    {
+      if (action==2)
+      {
+        Serial.print("Up >NEG: ");
+        Serial.println("PUSH 2");
+        motor2.brightness(BREAKVALUE);
+        motor1.brightness(255);
+      }
+      if (action==1)
+      {
+        Serial.print("Down >NEG : ");
+        Serial.println("PUSH 1");
+        motor2.brightness(255);
+        motor1.brightness(BREAKVALUE);
+      }
+    }
+    // else if (err < 0) // Negative number
     // {
-    //   char potvalue[2] ;
-    //   sprintf(potvalue,"%d",pot1.state());
-    //   client.publish("LF1", potvalue);
-    //   sprintf(potvalue,"%d",pot2.state());
-    //   client.publish("LF2", potvalue);
+    //     Serial.println("Favor 1");
+    //     motor1.brightness(255);
+    //     motor2.brightness(180);
+    // }
+    
+    // if (pot1.state() > pot2.state())
+    // {
+    //   motor2.trigger(motor2.EVT_OFF);
+    //   Serial.println("Stop Motor 2");
+    // }else if(pot1.state() < pot2.state())
+    // {
+    //   Serial.println("Start Motor 2");
+    //   motor2.trigger(motor2.EVT_OFF);
     // }
     
   }
