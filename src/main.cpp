@@ -94,8 +94,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
     motor2.trigger(motor2.EVT_OFF);
     client.publish("STATUS", "10");
     client.publish("STATUS", "20");
-    statusLED.blink(200.200);
-    statusLED.trigger(statusLED.EVT_BLINK);
+    statusLED.blink(300,300).trigger(statusLED.EVT_BLINK);
+    
     digitalWrite(dirPin,LOW);
       
   } 
@@ -109,7 +109,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     client.publish("STATUS", "13");
     client.publish("STATUS", "23");
     digitalWrite(dirPin,LOW);
-     
+    statusLED.blink(60,60).trigger(statusLED.EVT_BLINK); 
   } 
 
   if ((char)payload[0] == '2') {
@@ -122,6 +122,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     client.publish("STATUS", "13");
     client.publish("STATUS", "23");
     digitalWrite(dirPin,HIGH);
+     statusLED.blink(60,60).trigger(statusLED.EVT_BLINK); 
     
   }
   
@@ -139,8 +140,8 @@ void reconnect()
       // Once connected, publish an announcement...
       client.publish("STATUS", "15");
       client.publish("STATUS", "25");
-      statusLED.begin(ledPin).blink(20.2000);
-      statusLED.trigger(statusLED.EVT_BLINK);
+      statusLED.begin(ledPin).blink(20,2000).trigger(statusLED.EVT_BLINK);
+      
       // ... and resubscribe
       client.subscribe("SIGNAL");
     } else {
@@ -161,10 +162,12 @@ void pot1_callback( int idx, int v, int up ) {
   
     motor1.trigger(motor1.EVT_OFF);
     client.publish("STATUS", "11");
+    statusLED.blink(300,300).trigger(statusLED.EVT_BLINK); 
 
    }else if(v > UpperLimit && action==2){
      motor1.trigger(motor1.EVT_OFF);
      client.publish("STATUS", "12");
+      statusLED.blink(300,300).trigger(statusLED.EVT_BLINK); 
      
    }
   
@@ -174,10 +177,12 @@ void pot2_callback( int idx, int v, int up ) {
   if (v < LowerLimit2  && action==1)
   {  
    motor2.trigger(motor2.EVT_OFF);
-   motor2.trace(Serial);
+  
+    statusLED.blink(300,300).trigger(statusLED.EVT_BLINK); 
     client.publish("STATUS", "21");
    }else if(v > UpperLimit2 && action==2){
      motor2.trigger(motor2.EVT_OFF);
+      statusLED.blink(300,300).trigger(statusLED.EVT_BLINK); 
      client.publish("STATUS", "22");
    }
   
@@ -212,7 +217,7 @@ void setup() {
   // print your local IP address: 
   // Allow the hardware to sort itself out
   delay(1500);
-  statusLED.begin(ledPin).trigger(statusLED.EVT_ON);
+  statusLED.begin(ledPin);
 
   client.setServer(mqttServer, 1883);
   client.setCallback(callback);
