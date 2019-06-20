@@ -27,7 +27,7 @@ Controls Motor 1-2
 
 #define potPin1   A0    // Setpoint Master
 #define potPin2   A1    // Slave output
-#define ledPin 9
+#define ledPin    A3    // Status All in One LED
 // M1 ------------------------------
 const int UpperLimit = 445;
 const int LowerLimit = 65;
@@ -50,7 +50,6 @@ Atm_analog pot2;  //Slave
 Atm_led statusLED;
 
 const char* mqtt_mqttServer = "192.198.10.22";
-// Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network.
 // gateway and subnet are optional:
 byte mac[] = {
@@ -95,7 +94,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
     motor2.trigger(motor2.EVT_OFF);
     client.publish("STATUS", "10");
     client.publish("STATUS", "20");
-    
+    statusLED.blink(200.200);
+    statusLED.trigger(statusLED.EVT_BLINK);
     digitalWrite(dirPin,LOW);
       
   } 
@@ -139,7 +139,8 @@ void reconnect()
       // Once connected, publish an announcement...
       client.publish("STATUS", "15");
       client.publish("STATUS", "25");
-
+      statusLED.begin(ledPin).blink(20.2000);
+      statusLED.trigger(statusLED.EVT_BLINK);
       // ... and resubscribe
       client.subscribe("SIGNAL");
     } else {
@@ -205,13 +206,13 @@ void setup() {
   // -------------------------------------------------------------
   // Motors Controls
   motor1.begin(motorPin1);
-  motor2.begin(motorPin2).brightness(255);// Throttle back dominant motor-Good Luck!?!
+  motor2.begin(motorPin2);// Throttle back dominant motor-Good Luck!?!
 
   Serial.begin(9600);
   // print your local IP address: 
   // Allow the hardware to sort itself out
   delay(1500);
-
+  statusLED.begin(ledPin).trigger(statusLED.EVT_ON);
 
   client.setServer(mqttServer, 1883);
   client.setCallback(callback);
@@ -246,7 +247,7 @@ void loop() {
     Serial.println(err);
     Serial.print("Action");
     Serial.println(action);
-    long correction = abs(err);
+  
     
     if (err > 0)   // Error is positive number--
     {
@@ -283,22 +284,6 @@ void loop() {
         motor1.brightness(BREAKVALUE);
       }
     }
-    // else if (err < 0) // Negative number
-    // {
-    //     Serial.println("Favor 1");
-    //     motor1.brightness(255);
-    //     motor2.brightness(180);
-    // }
-    
-    // if (pot1.state() > pot2.state())
-    // {
-    //   motor2.trigger(motor2.EVT_OFF);
-    //   Serial.println("Stop Motor 2");
-    // }else if(pot1.state() < pot2.state())
-    // {
-    //   Serial.println("Start Motor 2");
-    //   motor2.trigger(motor2.EVT_OFF);
-    // }
     
   }
 
