@@ -1,5 +1,5 @@
 /*
-Design Synthesis.net -r.young 6/3/2019 v1.0
+Design Synthesis.net -r.young 6/3/2019 v1.1
 Skylight Sub-Controller [LSCTRL1 / LSCTRL2]
 Control two motors with potentiometer limits
 UP and DOWN limit switches for damage control
@@ -122,7 +122,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     client.publish("STATUS", "13");
     client.publish("STATUS", "23");
     digitalWrite(dirPin,HIGH);
-     statusLED.blink(60,60).trigger(statusLED.EVT_BLINK); 
+    statusLED.blink(60,60).trigger(statusLED.EVT_BLINK); 
     
   }
   
@@ -188,11 +188,32 @@ void pot2_callback( int idx, int v, int up ) {
   
 }
 
+void button_change( int idx, int v, int up ) {
+  
+  if (pot1.state()< (LowerLimit -2) || pot1.state()> (UpperLimit + 2))
+  {
+    motor1.trigger( motor1.EVT_OFF );  
+    motor2.trigger( motor2.EVT_OFF);  
+    client.publish("STATUS", "14");
+    client.publish("STATUS", "24");
+  }
+  if (pot2.state()< (LowerLimit - 2) || pot2.state() > (UpperLimit + 2))
+  {
+    motor1.trigger( motor1.EVT_OFF );  
+    motor2.trigger( motor2.EVT_OFF);  
+    client.publish("STATUS", "14");
+    client.publish("STATUS", "24");
+  }
+  
+ 
+  
+}
+
 void setup() {
   // Directional PIN ------------------------------------------
   pinMode(dirPin,OUTPUT);
   // Limit Switches Init ------------------------------------------
-  downSwitch1.begin(downLimitPin1).onRelease(motor1,motor1.EVT_OFF);
+  downSwitch1.begin(downLimitPin1).onRelease(button_change);
   //downSwitch1.trace(Serial);
   upSwitch1.begin(upLimitPin1).onRelease(motor1,motor1.EVT_OFF);
   //upSwitch1.trace(Serial);
