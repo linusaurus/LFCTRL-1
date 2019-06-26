@@ -41,6 +41,11 @@ Atm_button upSwitch1;
 Atm_button downSwitch1;
 Atm_button upSwitch2;
 Atm_button downSwitch2;
+// State Flags ------------------------------------------------------------------------------
+bool LF1_UP{false};
+bool LF1_DOWN{false};
+bool LF2_UP{false};
+bool LF2_DOWN{false};
 
 // State Machine functions for Potentiometer--
 Atm_analog pot1;  //Set-Point
@@ -160,14 +165,24 @@ void pot1_callback( int idx, int v, int up ) {
   if (v < LowerLimit  && action==1)
   { 
   
-    motor1.trigger(motor1.EVT_OFF);
-    client.publish("STATUS", "11");
+    motor1.trigger(motor1.EVT_OFF);   
     statusLED.blink(300,300).trigger(statusLED.EVT_BLINK); 
+    if(!LF1_DOWN){
+      client.publish("STATUS", "11");
+      LF1_DOWN=true;
+      LF1_UP=false;
+    }
 
    }else if(v > UpperLimit && action==2){
      motor1.trigger(motor1.EVT_OFF);
-     client.publish("STATUS", "12");
-      statusLED.blink(300,300).trigger(statusLED.EVT_BLINK); 
+    
+    statusLED.blink(300,300).trigger(statusLED.EVT_BLINK); 
+    if(!LF1_UP){
+       client.publish("STATUS", "12");
+       LF1_UP=true;
+       LF1_DOWN=false;
+
+    }
      
    }
   
@@ -176,14 +191,25 @@ void pot2_callback( int idx, int v, int up ) {
  
   if (v < LowerLimit2  && action==1)
   {  
-   motor2.trigger(motor2.EVT_OFF);
-  
-    statusLED.blink(300,300).trigger(statusLED.EVT_BLINK); 
-    client.publish("STATUS", "21");
+   motor2.trigger(motor2.EVT_OFF); 
+   statusLED.blink(300,300).trigger(statusLED.EVT_BLINK); 
+   if(!LF2_DOWN){
+      client.publish("STATUS", "21");
+      LF2_DOWN=true;
+      LF2_UP=false;
+
+   }
+    
    }else if(v > UpperLimit2 && action==2){
      motor2.trigger(motor2.EVT_OFF);
-      statusLED.blink(300,300).trigger(statusLED.EVT_BLINK); 
-     client.publish("STATUS", "22");
+     statusLED.blink(300,300).trigger(statusLED.EVT_BLINK); 
+     if(!LF2_UP){
+      client.publish("STATUS", "22");  
+      LF2_UP=true;
+      LF2_DOWN=false;
+
+     }
+     
    }
   
 }
