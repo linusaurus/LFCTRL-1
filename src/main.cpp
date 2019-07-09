@@ -1,5 +1,5 @@
 /*
-Design Synthesis.net -r.young 6/3/2019 v1.1
+Design Synthesis.net -r.young 7/10/2019 v1.3
 Skylight Sub-Controller [LSCTRL1 / LSCTRL2]
 Control two motors with potentiometer limits
 UP and DOWN limit switches for damage control
@@ -13,7 +13,7 @@ Controls Motor 1-2
 #include <Ethernet.h>
 #include <PubSubClient.h>
 #include <Automaton.h>
-#include <PID_v1.h>
+
 
 
 #define motorPin1   9
@@ -28,11 +28,17 @@ Controls Motor 1-2
 #define potPin1   A0    // Setpoint Master
 #define potPin2   A1    // Slave output
 #define ledPin    A3    // Status All in One LED
+#define csPin     A4    // Current Sense Pin
+// Debugging Flags
+#define debug     0
+#define mqtt      1
+#define switches  1
+
 // M1 ------------------------------
-const int UpperLimit = 445;
+const int UpperLimit = 405;
 const int LowerLimit = 65;
 // M2 -----------------------------
-const int UpperLimit2 = 445;
+const int UpperLimit2 = 405;
 const int LowerLimit2 = 65;
 //  --------------------------------
 int action = 0;
@@ -50,6 +56,7 @@ bool LF2_DOWN{false};
 // State Machine functions for Potentiometer--
 Atm_analog pot1;  //Set-Point
 Atm_analog pot2;  //Slave
+Atm_analog cs;
 // Controller machine for monitoring the Potenciometers
 
 Atm_led statusLED;
@@ -70,7 +77,7 @@ EthernetClient ethclient;
 PubSubClient client(ethclient);
 
 unsigned long previousMillis;
-unsigned long polling_interval = 1000;
+unsigned long polling_interval = 500;
 int position = 0;
 
 Atm_led motor1; //Master
@@ -79,6 +86,9 @@ long BREAKVALUE = 160;
 
 uint16_t avgPot1Buffer[16];
 uint16_t avgPot2Buffer[16];
+
+long PUSHCORRECTION = 2.8;
+long PULLCORRECTION = 0.14;
 
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -92,46 +102,41 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println();
 
    if ((char)payload[0] == '0') {
-   
+   #if debug ==1
     Serial.println("MQTT_STOP");
+    #endif
     action=0;
     motor1.trigger(motor1.EVT_OFF);
     motor2.trigger(motor2.EVT_OFF);
-    client.publish("STATUS", "10");
-    client.publish("STATUS", "20");
-    statusLED.blink(300,300).trigger(statusLED.EVT_BLINK);
-    
+ 
+    statusLED.blink(2000,500).trigger(statusLED.EVT_BLINK);
+   
     digitalWrite(dirPin,LOW);
       
   } 
 
   if ((char)payload[0] == '1') {
-   
+   #if debug ==1
     Serial.println("MQTT_CLOSING");
+    #endif
     action = 1;
     motor1.trigger(motor1.EVT_ON);
     motor2.trigger(motor2.EVT_ON);
-    client.publish("STATUS", "13");
-    client.publish("STATUS", "23");
     digitalWrite(dirPin,LOW);
-    statusLED.blink(60,60).trigger(statusLED.EVT_BLINK); 
+    statusLED.blink(1000,1000).trigger(statusLED.EVT_BLINK); 
   } 
 
   if ((char)payload[0] == '2') {
-
+    #if debug ==1
     Serial.println("MQTT_OPEN");
-   
+   #endif
     action = 2;
     motor1.trigger(motor1.EVT_ON);
-    motor2.trigger(motor2.EVT_ON);
-    client.publish("STATUS", "13");
-    client.publish("STATUS", "23");
+    motor2.trigger(motor2.EVT_ON);  
     digitalWrite(dirPin,HIGH);
-    statusLED.blink(60,60).trigger(statusLED.EVT_BLINK); 
-    
+    statusLED.blink(1000,500).trigger(statusLED.EVT_BLINK);     
   }
   
-
 }
 
 void reconnect()
@@ -145,7 +150,7 @@ void reconnect()
       // Once connected, publish an announcement...
       client.publish("STATUS", "15");
       client.publish("STATUS", "25");
-      statusLED.begin(ledPin).blink(20,2000).trigger(statusLED.EVT_BLINK);
+      statusLED.begin(ledPin).blink(500,500).trigger(statusLED.EVT_BLINK);
       
       // ... and resubscribe
       client.subscribe("SIGNAL");
@@ -166,7 +171,7 @@ void pot1_callback( int idx, int v, int up ) {
   { 
   
     motor1.trigger(motor1.EVT_OFF);   
-    statusLED.blink(300,300).trigger(statusLED.EVT_BLINK); 
+    statusLED.blink(2000,500).trigger(statusLED.EVT_BLINK); 
     if(!LF1_DOWN){
       client.publish("STATUS", "11");
       LF1_DOWN=true;
@@ -176,7 +181,7 @@ void pot1_callback( int idx, int v, int up ) {
    }else if(v > UpperLimit && action==2){
      motor1.trigger(motor1.EVT_OFF);
     
-    statusLED.blink(300,300).trigger(statusLED.EVT_BLINK); 
+    statusLED.blink(2000,500).trigger(statusLED.EVT_BLINK); 
     if(!LF1_UP){
        client.publish("STATUS", "12");
        LF1_UP=true;
@@ -192,7 +197,7 @@ void pot2_callback( int idx, int v, int up ) {
   if (v < LowerLimit2  && action==1)
   {  
    motor2.trigger(motor2.EVT_OFF); 
-   statusLED.blink(300,300).trigger(statusLED.EVT_BLINK); 
+   statusLED.blink(2000,500).trigger(statusLED.EVT_BLINK); 
    if(!LF2_DOWN){
       client.publish("STATUS", "21");
       LF2_DOWN=true;
@@ -202,7 +207,7 @@ void pot2_callback( int idx, int v, int up ) {
     
    }else if(v > UpperLimit2 && action==2){
      motor2.trigger(motor2.EVT_OFF);
-     statusLED.blink(300,300).trigger(statusLED.EVT_BLINK); 
+     statusLED.blink(2000,500).trigger(statusLED.EVT_BLINK); 
      if(!LF2_UP){
       client.publish("STATUS", "22");  
       LF2_UP=true;
@@ -220,15 +225,11 @@ void button_change( int idx, int v, int up ) {
   {
     motor1.trigger( motor1.EVT_OFF );  
     motor2.trigger( motor2.EVT_OFF);  
-    client.publish("STATUS", "14");
-    client.publish("STATUS", "24");
   }
   if (pot2.state()< (LowerLimit - 2) || pot2.state() > (UpperLimit + 2))
   {
     motor1.trigger( motor1.EVT_OFF );  
     motor2.trigger( motor2.EVT_OFF);  
-    client.publish("STATUS", "14");
-    client.publish("STATUS", "24");
   }
   
  
@@ -238,6 +239,7 @@ void button_change( int idx, int v, int up ) {
 void setup() {
   // Directional PIN ------------------------------------------
   pinMode(dirPin,OUTPUT);
+  pinMode(csPin, INPUT);
   // Limit Switches Init ------------------------------------------
   downSwitch1.begin(downLimitPin1).onRelease(button_change);
   //downSwitch1.trace(Serial);
@@ -255,6 +257,8 @@ void setup() {
   pot2.begin(potPin2,50)
       .average(avgPot2Buffer, sizeof(avgPot2Buffer))
           .onChange(pot2_callback);
+
+ 
   // -------------------------------------------------------------
   // Motors Controls
   motor1.begin(motorPin1);
@@ -273,49 +277,58 @@ void setup() {
 }
 
 void loop() {
-  
+  #if mqtt == 1
   if (!client.connected()) {
     reconnect();
   }
  
   client.loop();
+  #endif
   automaton.run();
 
   unsigned long currentMillis = millis();
   // Main Utility Task Loop
   if(currentMillis - previousMillis > polling_interval) {  
     previousMillis = currentMillis;  
+
+    long pos1 = pot1.state() ;
+    long pos2 = pot2.state(); 
+    long err = pos1 - pos2;
+
+    #if debug ==1
     Serial.print("M1 -");
     Serial.println(pot1.state());
     Serial.print("M2 -");
     Serial.println(pot2.state());
     Serial.println("---------");
     
-    long pos1 = pot1.state() ;
-    long pos2 = pot2.state(); 
-
-    long err = pos1 - pos2;
+  
     Serial.print("Error ->");
     Serial.println(err);
     Serial.print("Action");
     Serial.println(action);
-  
+    #endif
     
     if (err > 0)   // Error is positive number--
     {
       if (action==2)
       {
+        #if debug ==1
         Serial.print("Up > POS : ");
         Serial.println("PUSH 2");
-        motor2.brightness(255);
-        motor1.brightness(BREAKVALUE);
+        #endif
+        // need to make function that reduces output the larger the error
+        motor2.brightness(255 - (abs(err) * PULLCORRECTION) );
+        motor1.brightness(255 - (abs(err) * PUSHCORRECTION) );
       }
       if (action==1)
       {
+        #if debug ==1
         Serial.print("Down>POS : ");
         Serial.println("PUSH 1");
-        motor2.brightness(BREAKVALUE);
-        motor1.brightness(255);
+        #endif
+        motor2.brightness(255 - (abs(err) * PUSHCORRECTION));
+        motor1.brightness(255 - (abs(err) * PULLCORRECTION));
       }
     }
 
@@ -323,17 +336,21 @@ void loop() {
     {
       if (action==2)
       {
+        #if debug ==1
         Serial.print("Up >NEG: ");
         Serial.println("PUSH 2");
-        motor2.brightness(BREAKVALUE);
-        motor1.brightness(255);
+        #endif
+        motor2.brightness(255 - (abs(err) * PUSHCORRECTION));
+        motor1.brightness(255 - (abs(err) * PULLCORRECTION));
       }
       if (action==1)
       {
+        #if debug ==1
         Serial.print("Down >NEG : ");
         Serial.println("PUSH 1");
-        motor2.brightness(255);
-        motor1.brightness(BREAKVALUE);
+        #endif
+        motor2.brightness(255 - (abs(err) * PULLCORRECTION) );
+        motor1.brightness(255 - (abs(err) * PUSHCORRECTION));
       }
     }
     
