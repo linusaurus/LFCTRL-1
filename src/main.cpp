@@ -30,7 +30,7 @@ Controls Motor 1-2
 #define ledPin    A3    // Status All in One LED
 #define csPin     A4    // Current Sense Pin
 // Debugging Flags
-#define debug     0
+#define debug     1
 #define mqtt      1
 #define switches  1
 
