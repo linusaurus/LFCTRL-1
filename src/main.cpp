@@ -35,11 +35,11 @@ Controls Motor 1-2
 #define switches  1
 
 // M1 ------------------------------
-const int UpperLimit = 405;
-const int LowerLimit = 65;
+const int UpperLimit = 412;
+const int LowerLimit = 95;
 // M2 -----------------------------
-const int UpperLimit2 = 405;
-const int LowerLimit2 = 65;
+const int UpperLimit2 = 392;
+const int LowerLimit2 = 60;
 //  --------------------------------
 int action = 0;
 // Automaton Objects ----------------------------------------
